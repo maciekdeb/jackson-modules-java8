@@ -1,36 +1,29 @@
 package com.fasterxml.jackson.datatype.jsr310.deser;
 
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.Month;
-import java.time.ZoneOffset;
-import java.time.temporal.Temporal;
-import java.util.Map;
-
-import com.fasterxml.jackson.annotation.OptBoolean;
-
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonFormat.Feature;
-
+import com.fasterxml.jackson.annotation.OptBoolean;
 import com.fasterxml.jackson.core.type.TypeReference;
-
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
+import com.fasterxml.jackson.databind.cfg.CoercionAction;
+import com.fasterxml.jackson.databind.cfg.CoercionInputShape;
 import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import com.fasterxml.jackson.databind.exc.MismatchedInputException;
-
 import com.fasterxml.jackson.datatype.jsr310.MockObjectConfiguration;
 import com.fasterxml.jackson.datatype.jsr310.ModuleTestBase;
-
+import org.hamcrest.MatcherAssert;
 import org.junit.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.fail;
+import java.time.*;
+import java.time.temporal.Temporal;
+import java.util.Map;
+
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.*;
 
 public class LocalDateDeserTest extends ModuleTestBase
 {
@@ -173,7 +166,7 @@ public class LocalDateDeserTest extends ModuleTestBase
                .build();
         LocalDate date = LocalDate.of(2005, Month.NOVEMBER, 5);
         Temporal value = mapper.readValue(
-                "[\"" + LocalDate.class.getName() + "\",\"" + date.toString() + "\"]", Temporal.class
+                "[\"" + LocalDate.class.getName() + "\",\"" + date + "\"]", Temporal.class
                 );
         assertEquals("The value is not correct.", date, value);
     }
@@ -355,7 +348,7 @@ public class LocalDateDeserTest extends ModuleTestBase
     }
 
     @Test
-    public void testStrictCustomFormatForInvalidFormat() throws Exception
+    public void testStrictCustomFormatForInvalidFormat()
     {
         try {
             /*StrictWrapperWithFormat w = */ MAPPER.readValue(
@@ -371,19 +364,19 @@ public class LocalDateDeserTest extends ModuleTestBase
     }
 
     @Test(expected = InvalidFormatException.class)
-    public void testStrictCustomFormatForInvalidFormatWithEra() throws Exception
+    public void testStrictCustomFormatForInvalidFormatWithEra()
     {
         /*StrictWrapperWithYearOfEra w =*/ MAPPER.readValue("{\"value\":\"2019-11-30\"}", StrictWrapperWithYearOfEra.class);
     }
 
     @Test(expected = InvalidFormatException.class)
-    public void testStrictCustomFormatForInvalidDateWithEra() throws Exception
+    public void testStrictCustomFormatForInvalidDateWithEra()
     {
         /*StrictWrapperWithYearOfEra w =*/ MAPPER.readValue("{\"value\":\"2019-11-31 AD\"}", StrictWrapperWithYearOfEra.class);
     }
 
     @Test
-    public void testStrictCustomFormatForValidDateWithEra() throws Exception
+    public void testStrictCustomFormatForValidDateWithEra()
     {
         StrictWrapperWithYearOfEra w = MAPPER.readValue("{\"value\":\"2019-11-30 AD\"}", StrictWrapperWithYearOfEra.class);
 
@@ -391,19 +384,19 @@ public class LocalDateDeserTest extends ModuleTestBase
     }
 
     @Test(expected = InvalidFormatException.class)
-    public void testStrictCustomFormatForInvalidFormatWithoutEra() throws Exception
+    public void testStrictCustomFormatForInvalidFormatWithoutEra()
     {
         /*StrictWrapperWithYearWithoutEra w =*/ MAPPER.readValue("{\"value\":\"2019-11-30 AD\"}", StrictWrapperWithYearWithoutEra.class);
     }
 
     @Test(expected = InvalidFormatException.class)
-    public void testStrictCustomFormatForInvalidDateWithoutEra() throws Exception
+    public void testStrictCustomFormatForInvalidDateWithoutEra()
     {
         /*StrictWrapperWithYearWithoutEra w =*/ MAPPER.readValue("{\"value\":\"2019-11-31\"}", StrictWrapperWithYearWithoutEra.class);
     }
 
     @Test
-    public void testStrictCustomFormatForValidDateWithoutEra() throws Exception
+    public void testStrictCustomFormatForValidDateWithoutEra()
     {
         StrictWrapperWithYearWithoutEra w = MAPPER.readValue("{\"value\":\"2019-11-30\"}", StrictWrapperWithYearWithoutEra.class);
 
@@ -466,7 +459,7 @@ public class LocalDateDeserTest extends ModuleTestBase
     {
         final ObjectMapper mapper = mapperBuilder()
                 .configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_VALUES, false)
-                .withConfigOverride(LocalDate.class, o -> JsonFormat.Value.forPattern("dd-MMM-yyyy"))
+                .withConfigOverride(LocalDate.class, o -> o.setFormat(JsonFormat.Value.forPattern("dd-MMM-yyyy")))
                 .build();
         ObjectReader reader = mapper.readerFor(LocalDate.class);
         String[] jsons = new String[] { q("01-JAN-2000"), q("01-jan-2000")};
@@ -494,7 +487,7 @@ public class LocalDateDeserTest extends ModuleTestBase
                         o -> o.setFormat(JsonFormat.Value.forShape(JsonFormat.Shape.NUMBER_INT)))
                 .build();
 
-        assertEquals("The value is not correct.", LocalDate.of(1970, Month.MAY, 04),
+        assertEquals("The value is not correct.", LocalDate.of(1970, Month.MAY, 4),
                 mapper.readValue("123", LocalDate.class));
     }
 
@@ -509,7 +502,7 @@ public class LocalDateDeserTest extends ModuleTestBase
         ShapeWrapper w = mapper.readValue("{\"date\":123}", ShapeWrapper.class);
         LocalDate localDate = w.date;
 
-        assertEquals("The value is not correct.", LocalDate.of(1970, Month.MAY, 04),
+        assertEquals("The value is not correct.", LocalDate.of(1970, Month.MAY, 4),
                 localDate);
     }
 
@@ -526,6 +519,36 @@ public class LocalDateDeserTest extends ModuleTestBase
         } catch (MismatchedInputException e) {
             verifyException(e, "Cannot deserialize instance of `java.time.LocalDate`");
         }
+    }
+
+    /*
+    /**********************************************************************
+    *
+    * coercion config test
+    *
+    /**********************************************************************
+    */
+    private final ObjectMapper MAPPER_WITH_COERCION_CONFIG = newMapper().rebuild()
+            .withCoercionConfig(LocalDate.class,
+                    mutableCoercionConfig -> mutableCoercionConfig
+                            .setCoercion(CoercionInputShape.Integer, CoercionAction.Fail)
+                            .setCoercion(CoercionInputShape.EmptyString, CoercionAction.Fail)
+            ).build();
+
+    @Test
+    public void testDeserializeFromIntegerWithCoercionActionFail() {
+        MismatchedInputException exception = assertThrows(
+                MismatchedInputException.class,
+                () -> MAPPER_WITH_COERCION_CONFIG.readValue("123", LocalDate.class));
+        assertThat(exception.getMessage(), containsString("Cannot coerce Integer value (123) to `java.time.LocalDate`"));
+    }
+
+    @Test
+    public void testDeserializeFromEmptyStringWithCoercionActionFail() {
+        MismatchedInputException exception = assertThrows(
+                MismatchedInputException.class,
+                () -> MAPPER_WITH_COERCION_CONFIG.readValue(a2q("{'value':''}"), Wrapper.class));
+        assertThat(exception.getMessage(), containsString("Cannot coerce empty String (\"\") to `java.time.LocalDate`"));
     }
 
     /*
