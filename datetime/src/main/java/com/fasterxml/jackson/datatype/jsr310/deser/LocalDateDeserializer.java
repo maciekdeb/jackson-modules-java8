@@ -16,17 +16,19 @@
 
 package com.fasterxml.jackson.datatype.jsr310.deser;
 
-import java.time.DateTimeException;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-
 import com.fasterxml.jackson.annotation.JsonFormat;
-
-import com.fasterxml.jackson.core.*;
-
+import com.fasterxml.jackson.core.JacksonException;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JavaType;
+import com.fasterxml.jackson.databind.cfg.CoercionAction;
+import com.fasterxml.jackson.databind.cfg.CoercionInputShape;
+
+import java.time.DateTimeException;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 
 /**
  * Deserializer for Java 8 temporal {@link LocalDate}s.
@@ -99,7 +101,7 @@ public class LocalDateDeserializer extends JSR310DateTimeDeserializerBase<LocalD
                 return null;
             }
             if (context.isEnabled(DeserializationFeature.UNWRAP_SINGLE_VALUE_ARRAYS)
-                    && (t == JsonToken.VALUE_STRING || t==JsonToken.VALUE_EMBEDDED_OBJECT)) {
+                    && (t == JsonToken.VALUE_STRING || t == JsonToken.VALUE_EMBEDDED_OBJECT)) {
                 final LocalDate parsed = deserialize(parser, context);
                 if (parser.nextToken() != JsonToken.END_ARRAY) {
                     handleMissingEndArrayForSingle(parser, context);
@@ -126,6 +128,11 @@ public class LocalDateDeserializer extends JSR310DateTimeDeserializerBase<LocalD
         }
         // 06-Jan-2018, tatu: Is this actually safe? Do users expect such coercion?
         if (parser.hasToken(JsonToken.VALUE_NUMBER_INT)) {
+            CoercionAction act = context.findCoercionAction(logicalType(), _valueClass,
+                    CoercionInputShape.Integer);
+            _checkCoercionFail(context, act, handledType(), parser.getLongValue(),
+                    "Integer value (" + parser.getLongValue() + ")");
+
             // issue 58 - also check for NUMBER_INT, which needs to be specified when serializing.
             if (_shape == JsonFormat.Shape.NUMBER_INT || isLenient()) {
                 return LocalDate.ofEpochDay(parser.getLongValue());
